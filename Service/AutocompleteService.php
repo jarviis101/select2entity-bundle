@@ -11,33 +11,13 @@ use Symfony\Component\PropertyAccess\PropertyAccess;
 
 class AutocompleteService
 {
-    /**
-     * @var FormFactoryInterface
-     */
-    private $formFactory;
-
-    /**
-     * @var ManagerRegistry
-     */
-    private $doctrine;
-
-    /**
-     * @param FormFactoryInterface $formFactory
-     * @param ManagerRegistry      $doctrine
-     */
-    public function __construct(FormFactoryInterface $formFactory, ManagerRegistry $doctrine)
-    {
-        $this->formFactory = $formFactory;
-        $this->doctrine = $doctrine;
+    public function __construct(
+        private readonly FormFactoryInterface $formFactory,
+        private readonly ManagerRegistry $doctrine,
+    ) {
     }   
 
-    /**
-     * @param Request                  $request
-     * @param string|FormTypeInterface $type
-     *
-     * @return array
-     */
-    public function getAutocompleteResults(Request $request, $type)
+    public function getAutocompleteResults(Request $request, string|FormTypeInterface $type): array
     {
         $form = $this->formFactory->create($type);
         $fieldOptions = $form->get($request->get('field_name'))->getConfig()->getOptions();
@@ -75,7 +55,7 @@ class AutocompleteService
         $count = $countQB->getQuery()->getSingleScalarResult();
         $paginationResults = $resultQb->getQuery()->getResult();
 
-        $result = ['results' => null, 'more' => $count > ($offset + $maxResults)];
+        $result = ['more' => $count > ($offset + $maxResults)];
 
         $accessor = PropertyAccess::createPropertyAccessor();
 

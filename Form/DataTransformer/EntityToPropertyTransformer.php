@@ -2,6 +2,7 @@
 
 namespace Tetranz\Select2EntityBundle\Form\DataTransformer;
 
+use Doctrine\ORM\UnexpectedResultException;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\Form\DataTransformerInterface;
 use Symfony\Component\Form\Exception\TransformationFailedException;
@@ -17,80 +18,62 @@ use Symfony\Component\PropertyAccess\PropertyAccessor;
  */
 class EntityToPropertyTransformer implements DataTransformerInterface
 {
-    protected ObjectManager $em;
-    protected string $className;
-    protected ?string $textProperty;
-    protected string $primaryKey;
-    protected string $newTagPrefix;
-    protected string $newTagText;
     protected PropertyAccessor $accessor;
 
     public function __construct(
-        ObjectManager $em,
-        string $class,
-        ?string $textProperty = null,
-        string $primaryKey = 'id',
-        string $newTagPrefix = '__',
-        string $newTagText = ' (NEW)',
+        protected ObjectManager $em,
+        protected string $className,
+        protected ?string $textProperty = null,
+        protected string $primaryKey = 'id',
+        protected string $newTagPrefix = '__',
+        protected string $newTagText = ' (NEW)',
     ) {
-        $this->em = $em;
-        $this->className = $class;
-        $this->textProperty = $textProperty;
-        $this->primaryKey = $primaryKey;
-        $this->newTagPrefix = $newTagPrefix;
-        $this->newTagText = $newTagText;
         $this->accessor = PropertyAccess::createPropertyAccessor();
     }
 
     /**
      * Transform entity to array
-     *
-     * @param mixed $entity
      */
-    public function transform($entity): array
+    public function transform(mixed $value): array
     {
         $data = array();
-        if (empty($entity)) {
+        if (empty($value)) {
             return $data;
         }
 
         $text = is_null($this->textProperty)
-            ? (string) $entity
-            : $this->accessor->getValue($entity, $this->textProperty);
+            ? (string) $value
+            : $this->accessor->getValue($value, $this->textProperty);
 
-        if ($this->em->contains($entity)) {
-            $value = (string) $this->accessor->getValue($entity, $this->primaryKey);
+        if ($this->em->contains($value)) {
+            $v = (string) $this->accessor->getValue($value, $this->primaryKey);
         } else {
-            $value = $this->newTagPrefix . $text;
+            $v = $this->newTagPrefix . $text;
             $text = $text.$this->newTagText;
         }
 
-        $data[$value] = $text;
+        $data[$v] = $text;
 
         return $data;
     }
 
     /**
      * Transform single id value to an entity
-     *
-     * @param string $value
      */
-    public function reverseTransform($value): mixed
+    public function reverseTransform(mixed $value): mixed
     {
+        /** @var string $value */
         if (empty($value)) {
             return null;
         }
 
-        // Add a potential new tag entry
         $tagPrefixLength = strlen($this->newTagPrefix);
         $cleanValue = substr($value, $tagPrefixLength);
         $valuePrefix = substr($value, 0, $tagPrefixLength);
         if ($valuePrefix == $this->newTagPrefix) {
-            // In that case, we have a new entry
             $entity = new $this->className;
             $this->accessor->setValue($entity, $this->textProperty, $cleanValue);
         } else {
-            // We do not search for a new entry, as it does not exist yet, by definition
             try {
                 $entity = $this->em->createQueryBuilder()
                     ->select('entity')
@@ -100,8 +83,7 @@ class EntityToPropertyTransformer implements DataTransformerInterface
                     ->getQuery()
                     ->getSingleResult();
             }
-            catch (\Doctrine\ORM\UnexpectedResultException $ex) {
-                // this will happen if the form submits invalid data
+            catch (UnexpectedResultException) {
                 throw new TransformationFailedException(sprintf('The choice "%s" does not exist or is not unique', $value));
             }
         }
