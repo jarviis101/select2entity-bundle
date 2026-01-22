@@ -16,30 +16,22 @@ use Symfony\Component\PropertyAccess\PropertyAccessor;
  */
 class EntitiesToPropertyTransformer implements DataTransformerInterface
 {
-    /** @var ObjectManager */
-    protected $em;
-    /** @var  string */
-    protected $className;
-    /** @var  string */
-    protected $textProperty;
-    /** @var  string */
-    protected $primaryKey;
-    /** @var  string */
-    protected $newTagPrefix;
-    /** @var string  */
-    protected $newTagText;
-    /** @var PropertyAccessor */
-    protected $accessor;
+    protected ObjectManager $em;
+    protected string $className;
+    protected string $textProperty;
+    protected string $primaryKey;
+    protected string $newTagPrefix;
+    protected string $newTagText;
+    protected PropertyAccessor $accessor;
 
-    /**
-     * @param ObjectManager $em
-     * @param string $class
-     * @param string|null $textProperty
-     * @param string $primaryKey
-     * @param string $newTagPrefix
-     */
-    public function __construct(ObjectManager $em, $class, $textProperty = null, $primaryKey = 'id', $newTagPrefix = '__', $newTagText = ' (NEW)')
-    {
+    public function __construct(
+        ObjectManager $em,
+        string $class,
+        ?string $textProperty = null,
+        string $primaryKey = 'id',
+        string $newTagPrefix = '__',
+        string $newTagText = ' (NEW)',
+    ) {
         $this->em = $em;
         $this->className = $class;
         $this->textProperty = $textProperty;
@@ -53,9 +45,8 @@ class EntitiesToPropertyTransformer implements DataTransformerInterface
      * Transform initial entities to array
      *
      * @param mixed $entities
-     * @return array
      */
-    public function transform($entities)
+    public function transform($entities): array
     {
         if (empty($entities)) {
             return array();
@@ -85,9 +76,8 @@ class EntitiesToPropertyTransformer implements DataTransformerInterface
      * Transform array to a collection of entities
      *
      * @param array $values
-     * @return array
      */
-    public function reverseTransform($values)
+    public function reverseTransform($values): array
     {
         if (!is_array($values) || empty($values)) {
             return array();
